@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lakeside Health - Workplace Happiness Survey</title>
+
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 2. React Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- 3. Babel to transpile JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 4. Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // This tag tells Babel to transpile all the code inside it.
+        // All the React code from the previous attempts goes in here.
+
+        const { useState, useEffect, useRef } = React;
+
+        // === ICONS (as inline SVG components) ===
+        const SendIcon = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        );
+        const ChartIcon = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        );
+        const SparkleIcon = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+        );
+        const MeaningIcon = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7.014A8.003 8.003 0 0112 3c2.39 0 4.56.94 6.181 2.486C20.5 7.5 21 10 21 10s-1.343-1.343-2.343-2.343z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 14c-2.21 0-4 1.79-4 4h8c0-2.21-1.79-4-4-4z" />
+          </svg>
+        );
+
+        // === MOCK DATA ===
+        const surveyQuestions = [
+            { id: 1, text: "I feel a sense of accomplishment from my work." },
+            { id: 2, text: "I feel respected by my colleagues." },
+            { id: 3, text: "I have a good understanding of my role and what is expected of me." },
+            { id: 4, text: "My work gives me a sense of purpose." },
+            { id: 5, text: "I feel optimistic about my future at this company." },
+        ];
+
+        const dashboardData = {
+            overallScore: 72,
+            industryBenchmark: 68,
+            surveyProgress: { completed: 170, total: 200 },
+            lowestDimension: { name: "Meaning", score: 58 },
+            chartData: [
+                { subject: 'Positive Emotion', A: 75 },
+                { subject: 'Engagement', A: 80 },
+                { subject: 'Relationships', A: 65 },
+                { subject: 'Meaning', A: 58 },
+                { subject: 'Accomplishment', A: 71 },
+                { subject: 'Autonomy', A: 78 },
+                { subject: 'Competence', A: 82 },
+                { subject: 'Support', A: 68 },
+            ],
+        };
+
+        // === COMPONENTS ===
+
+        const Header = ({ setView }) => (
+            <header className="bg-white/80 backdrop-blur-md fixed top-0 left-0 right-0 z-50 shadow-sm">
+                <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setView('landing')}>
+                        <svg className="w-8 h-8 text-blue-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <span className="text-2xl font-bold text-blue-900">Lakeside Health</span>
+                    </div>
+                    <nav className="hidden md:flex items-center space-x-8">
+                        <a href="#why" className="text-gray-600 hover:text-blue-800 transition">Why Happiness?</a>
+                        <a href="#how" className="text-gray-600 hover:text-blue-800 transition">How It Works</a>
+                        <a href="#science" className="text-gray-600 hover:text-blue-800 transition">The Science</a>
+                    </nav>
+                    <div className="flex items-center space-x-4">
+                        <button onClick={() => setView('dashboard')} className="hidden md:block text-gray-600 hover:text-blue-800 font-medium transition">Login</button>
+                        <button onClick={() => setView('dashboard')} className="bg-yellow-500 text-blue-900 font-bold py-2 px-5 rounded-full hover:bg-yellow-400 transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                            Get Started Free
+                        </button>
+                    </div>
+                </div>
+            </header>
+        );
+
+        const LandingPage = ({ setView }) => (
+            <div className="bg-gray-50 text-gray-800">
+                <Header setView={setView} />
+                <main>
+                    <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 flex items-center justify-center text-center bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=3600')" }}>
+                        <div className="absolute inset-0 bg-blue-900 opacity-60"></div>
+                        <div className="relative container mx-auto px-6">
+                            <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">Is Your Team Truly Thriving?</h1>
+                            <p className="text-lg md:text-xl text-blue-100 max-w-3xl mx-auto mb-8">
+                                Go beyond engagement. Measure, understand, and cultivate genuine workplace happiness with our free, science-backed survey.
+                            </p>
+                            <div className="max-w-md mx-auto">
+                                <form onSubmit={(e) => { e.preventDefault(); setView('dashboard'); }} className="flex flex-col sm:flex-row gap-3">
+                                    <input type="email" placeholder="Enter your work email" required className="flex-grow p-4 rounded-full text-center sm:text-left focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-opacity-50 transition" />
+                                    <button type="submit" className="bg-yellow-500 text-blue-900 font-bold py-4 px-8 rounded-full hover:bg-yellow-400 transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                        Start Your Free Survey Now &rarr;
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+                    <div id="why" className="bg-gray-100 py-6">
+                        <div className="container mx-auto px-6 text-center">
+                            <p className="text-gray-500 font-medium tracking-wider uppercase">Trusted by forward-thinking teams at:</p>
+                            <div className="flex justify-center items-center space-x-8 md:space-x-12 mt-4 grayscale opacity-60">
+                                <span className="font-bold text-xl">Innovate Corp</span>
+                                <span className="font-bold text-xl">Summit Solutions</span>
+                                <span className="font-bold text-xl">Pioneer Group</span>
+                                <span className="font-bold text-xl hidden sm:inline-block">Keystone</span>
+                            </div>
+                        </div>
+                    </div>
+                    <section id="how" className="py-20 md:py-28 bg-white">
+                        <div className="container mx-auto px-6 text-center">
+                            <h2 className="text-3xl md:text-4xl font-bold text-blue-900 mb-4">A Clear Path to a Happier Workplace</h2>
+                            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-16">In 3 simple, evidence-based steps.</p>
+                            <div className="grid md:grid-cols-3 gap-12">
+                                <div className="flex flex-col items-center"><div className="bg-blue-100 p-5 rounded-full mb-6"><SendIcon /></div><h3 className="text-xl font-bold text-blue-900 mb-2">1. Deploy in Minutes</h3><p className="text-gray-600">Launch our ready-to-use, anonymous survey. A single link makes it effortless for your team to participate.</p></div>
+                                <div className="flex flex-col items-center"><div className="bg-blue-100 p-5 rounded-full mb-6"><ChartIcon /></div><h3 className="text-xl font-bold text-blue-900 mb-2">2. Visualize Your Results</h3><p className="text-gray-600">Our interactive dashboard brings your data to life. Instantly see your overall Happiness Score.</p></div>
+                                <div className="flex flex-col items-center"><div className="bg-blue-100 p-5 rounded-full mb-6"><SparkleIcon /></div><h3 className="text-xl font-bold text-blue-900 mb-2">3. Gain Actionable Insights</h3><p className="text-gray-600">Receive a detailed report identifying key strengths and precise areas for improvement.</p></div>
+                            </div>
+                        </div>
+                    </section>
+                    <section id="science" className="py-20 md:py-28 bg-gray-50">
+                        <div className="container mx-auto px-6">
+                            <div className="grid md:grid-cols-2 gap-16 items-center">
+                                <div className="text-center md:text-left">
+                                    <h2 className="text-3xl md:text-4xl font-bold text-blue-900 mb-4">Science in Action.</h2>
+                                    <p className="text-lg text-gray-600 mb-8">Our methodology is grounded in decades of research and validated models of well-being.</p>
+                                    <ul className="space-y-4 text-left">
+                                        <li className="flex items-start"><span className="text-green-500 font-bold text-xl mr-3 mt-1">&#10003;</span><div><strong className="text-blue-900">PERMA Framework:</strong> We measure Positive Emotion, Engagement, Relationships, Meaning, and Accomplishment.</div></li>
+                                        <li className="flex items-start"><span className="text-green-500 font-bold text-xl mr-3 mt-1">&#10003;</span><div><strong className="text-blue-900">Self-Determination Theory:</strong> We assess core needs for Autonomy, Competence, and Relatedness.</div></li>
+                                        <li className="flex items-start"><span className="text-green-500 font-bold text-xl mr-3 mt-1">&#10003;</span><div><strong className="text-blue-900">Job Demands-Resources Model:</strong> We identify the specific drivers of burnout and resilience.</div></li>
+                                    </ul>
+                                </div>
+                                <div className="p-8 bg-white rounded-2xl shadow-xl"><img src="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1800" alt="Team collaborating on a whiteboard" className="rounded-xl"/></div>
+                            </div>
+                        </div>
+                    </section>
+                    <section className="py-20 bg-blue-800 text-white">
+                        <div className="container mx-auto px-6 text-center">
+                            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Discover Your Team's True Potential?</h2>
+                            <p className="text-lg text-blue-200 mb-8">Get your free Workplace Happiness Score and start building a better work environment today.</p>
+                            <button onClick={() => setView('dashboard')} className="bg-yellow-500 text-blue-900 font-bold py-4 px-8 rounded-full hover:bg-yellow-400 transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Get Started For Free &rarr;</button>
+                        </div>
+                    </section>
+                </main>
+                <footer className="bg-blue-900 text-blue-200 py-8"><div className="container mx-auto px-6 text-center"><p>&copy; 2025 Lakeside Health. All Rights Reserved.</p></div></footer>
+            </div>
+        );
+
+        const Dashboard = ({ setView }) => {
+            const chartContainer = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                // Since Chart.js is loaded globally in the <head>, we can assume it exists here.
+                if (chartContainer.current) {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+
+                    const labels = dashboardData.chartData.map(d => d.subject);
+                    const data = dashboardData.chartData.map(d => d.A);
+                    
+                    const ctx = chartContainer.current.getContext('2d');
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'radar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Innovate Corp Score',
+                                data: data,
+                                backgroundColor: 'rgba(44, 91, 123, 0.2)',
+                                borderColor: 'rgba(44, 91, 123, 1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgba(44, 91, 123, 1)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgba(44, 91, 123, 1)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                r: {
+                                    angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                                    suggestedMin: 0,
+                                    suggestedMax: 100,
+                                    grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                                    pointLabels: { font: { size: 12 } },
+                                    ticks: { backdropColor: 'transparent', stepSize: 20 }
+                                }
+                            },
+                            plugins: {
+                                legend: { position: 'top' },
+                            }
+                        }
+                    });
+                }
+                return () => {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                };
+            }, []);
+
+            return (
+                <div className="flex h-screen bg-gray-100">
+                    <div className="hidden md:flex flex-col w-64 bg-blue-900 text-blue-200">
+                        <div className="flex items-center justify-center h-20 border-b border-blue-800"><div className="flex items-center space-x-2 cursor-pointer" onClick={() => setView('landing')}><svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg><span className="text-2xl font-bold text-white">Lakeside</span></div></div>
+                        <nav className="flex-1 px-4 py-6 space-y-2">
+                            <a href="#" onClick={(e) => { e.preventDefault(); setView('dashboard'); }} className="flex items-center space-x-3 px-4 py-2 bg-blue-800 text-white rounded-lg"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg><span>Dashboard</span></a>
+                            <a href="#" onClick={(e) => { e.preventDefault(); setView('survey'); }} className="flex items-center space-x-3 px-4 py-2 hover:bg-blue-800 rounded-lg transition"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg><span>Surveys</span></a>
+                            <a href="#" onClick={(e) => { e.preventDefault(); setView('reports'); }} className="flex items-center space-x-3 px-4 py-2 hover:bg-blue-800 rounded-lg transition"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>Reports</span></a>
+                        </nav>
+                        <div className="p-4 border-t border-blue-800"><div className="flex items-center space-x-3"><img className="h-10 w-10 rounded-full" src="https://i.pravatar.cc/150?u=jane_doe" alt="User avatar" /><div><p className="font-semibold text-white">Jane Doe</p><p className="text-sm text-blue-300">Innovate Corp</p></div></div></div>
+                    </div>
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <header className="flex justify-between items-center p-6 bg-white border-b"><h1 className="text-2xl font-bold text-gray-800">Good morning, Jane.</h1><button onClick={() => setView('survey')} className="bg-blue-700 text-white font-bold py-2 px-5 rounded-full hover:bg-blue-600 transition shadow-md hover:shadow-lg">Launch New Survey</button></header>
+                        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                                <div className="bg-white p-6 rounded-2xl shadow-md flex flex-col justify-between"><div><p className="text-sm font-medium text-gray-500">Overall Happiness Score</p><p className="text-5xl font-bold text-blue-800 mt-2">{dashboardData.overallScore}<span className="text-2xl text-gray-400">/100</span></p></div><p className="text-sm text-green-600 mt-2"><span className="font-bold">+{dashboardData.overallScore - dashboardData.industryBenchmark} points</span> vs. Industry Benchmark ({dashboardData.industryBenchmark})</p></div>
+                                <div className="bg-white p-6 rounded-2xl shadow-md"><p className="text-sm font-medium text-gray-500">Survey: Q3 2025 Wellness Check</p><p className="text-3xl font-bold text-gray-800 mt-2">{dashboardData.surveyProgress.completed} <span className="text-xl text-gray-400">/ {dashboardData.surveyProgress.total} Responses</span></p><div className="w-full bg-gray-200 rounded-full h-2.5 mt-4"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${(dashboardData.surveyProgress.completed / dashboardData.surveyProgress.total) * 100}%` }}></div></div><p className="text-sm text-gray-500 mt-2 text-right">Closes in: 3 days</p></div>
+                                <div className="bg-red-50 border border-red-200 p-6 rounded-2xl shadow-md"><p className="text-sm font-medium text-red-600">Lowest Scoring Dimension</p><div className="flex items-center space-x-3 mt-2"><MeaningIcon /><p className="text-3xl font-bold text-red-700">{dashboardData.lowestDimension.name}</p></div><p className="text-4xl font-bold text-red-700 mt-2">{dashboardData.lowestDimension.score}<span className="text-2xl text-red-400">/100</span></p></div>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                                <div className="lg:col-span-3 bg-white p-6 rounded-2xl shadow-md">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4">Happiness Dimensions Overview</h3>
+                                    <div className="relative h-96"><canvas ref={chartContainer}></canvas></div>
+                                </div>
+                                <div className="lg:col-span-2 space-y-6">
+                                     <div className="bg-white p-6 rounded-2xl shadow-md border-l-4 border-red-500"><h3 className="font-bold text-gray-800 text-lg mb-2">Priority Area: Meaning ({dashboardData.lowestDimension.score}/100)</h3><p className="text-gray-600 mb-4 text-sm">Results indicate employees may not feel a strong connection to their work's purpose. This is a primary driver of disengagement.</p><p className="text-sm font-semibold text-blue-800 mb-2">Recommended Solution:</p><p className="text-sm text-gray-700 font-bold mb-4">Lakeside's "Purpose & Mission Articulation Workshop"</p><button className="w-full bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-full hover:bg-yellow-400 transition">Schedule a Consultation</button></div>
+                                     <div className="bg-white p-6 rounded-2xl shadow-md border-l-4 border-yellow-500"><h3 className="font-bold text-gray-800 text-lg mb-2">For Improvement: Relationships (65/100)</h3><p className="text-gray-600 mb-4 text-sm">Scores suggest peer and manager connections could be stronger, impacting psychological safety.</p><p className="text-sm font-semibold text-blue-800 mb-2">Recommended Solution:</p><p className="text-sm text-gray-700 font-bold mb-4">"Manager Training on Fostering Psychological Safety"</p><button className="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-full hover:bg-gray-300 transition">Learn More</button></div>
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+                </div>
+            );
+        };
+
+        const Survey = ({ setView }) => {
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const handleAnswer = () => {
+                if (currentQuestion < surveyQuestions.length - 1) {
+                    setTimeout(() => setCurrentQuestion(currentQuestion + 1), 300);
+                } else {
+                    setTimeout(() => setView('dashboard'), 500);
+                }
+            };
+            const question = surveyQuestions[currentQuestion];
+            const progress = ((currentQuestion + 1) / surveyQuestions.length) * 100;
+            return (
+                <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
+                    <div className="w-full max-w-2xl">
+                        <div className="text-center mb-4"><div className="flex items-center space-x-2 justify-center text-blue-900"><svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg><span className="text-2xl font-bold">Lakeside Health</span></div><p className="text-sm text-gray-500 mt-1">Anonymous Q3 Wellness Check</p></div>
+                        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
+                            <div className="mb-8"><div className="flex justify-between items-center mb-2"><span className="text-sm font-semibold text-blue-800">Question {currentQuestion + 1} of {surveyQuestions.length}</span></div><div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div></div></div>
+                            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-10 min-h-[100px]">{question.text}</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-center">
+                                {['Never', 'Rarely', 'Sometimes', 'Often', 'Always'].map((label, index) => (<button key={index} onClick={handleAnswer} className="p-4 rounded-lg border-2 border-gray-200 hover:bg-blue-100 hover:border-blue-400 focus:bg-blue-600 focus:text-white focus:border-blue-600 focus:outline-none transition transform hover:scale-105">{label}</button>))}
+                            </div>
+                        </div>
+                        <button onClick={() => setView('dashboard')} className="text-sm text-gray-500 mt-6 hover:text-gray-800 transition">Exit Survey</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const ReportsPage = ({ setView }) => (
+            <div className="flex h-screen bg-gray-100">
+                <div className="hidden md:flex flex-col w-64 bg-blue-900 text-blue-200">
+                    <div className="flex items-center justify-center h-20 border-b border-blue-800"><div className="flex items-center space-x-2 cursor-pointer" onClick={() => setView('landing')}><svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg><span className="text-2xl font-bold text-white">Lakeside</span></div></div>
+                    <nav className="flex-1 px-4 py-6 space-y-2">
+                        <a href="#" onClick={(e) => { e.preventDefault(); setView('dashboard'); }} className="flex items-center space-x-3 px-4 py-2 hover:bg-blue-800 rounded-lg transition"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg><span>Dashboard</span></a>
+                        <a href="#" onClick={(e) => { e.preventDefault(); setView('survey'); }} className="flex items-center space-x-3 px-4 py-2 hover:bg-blue-800 rounded-lg transition"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg><span>Surveys</span></a>
+                        <a href="#" onClick={(e) => { e.preventDefault(); setView('reports'); }} className="flex items-center space-x-3 px-4 py-2 bg-blue-800 text-white rounded-lg"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>Reports</span></a>
+                    </nav>
+                    <div className="p-4 border-t border-blue-800"><div className="flex items-center space-x-3"><img className="h-10 w-10 rounded-full" src="https://i.pravatar.cc/150?u=jane_doe" alt="User avatar" /><div><p className="font-semibold text-white">Jane Doe</p><p className="text-sm text-blue-300">Innovate Corp</p></div></div></div>
+                </div>
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    <header className="flex justify-between items-center p-6 bg-white border-b"><h1 className="text-2xl font-bold text-gray-800">Reports</h1><button onClick={() => setView('dashboard')} className="text-blue-700 font-bold py-2 px-5 rounded-full hover:bg-blue-100 transition">&larr; Back to Dashboard</button></header>
+                    <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+                        <div className="bg-white p-8 rounded-2xl shadow-md">
+                            <h2 className="text-2xl font-bold text-blue-900 mb-4 text-center">Q3 2025 Wellness Check Report</h2>
+                            <p className="text-gray-600 mb-8 text-center">This is a preview of the generated report. In a full implementation, this would be a downloadable PDF.</p>
+                            <div className="text-left border rounded-lg p-6 bg-gray-50 max-w-4xl mx-auto">
+                                <h3 className="font-bold text-lg mb-2">Executive Summary</h3>
+                                <p className="mb-4"><strong>Overall Happiness Score: <span className="text-blue-800">{dashboardData.overallScore}/100</span> (Above Benchmark)</strong></p>
+                                <h4 className="font-semibold mt-6">Strengths:</h4>
+                                <ul className="list-disc list-inside mb-4 text-gray-700 space-y-1">
+                                    <li><strong>Competence ({dashboardData.chartData.find(d => d.subject === 'Competence').A}):</strong> Employees feel skilled and effective in their roles.</li>
+                                    <li><strong>Engagement ({dashboardData.chartData.find(d => d.subject === 'Engagement').A}):</strong> High levels of focus and "flow" in daily tasks.</li>
+                                </ul>
+                                <h4 className="font-semibold text-red-700 mt-6">Priority Areas for Action:</h4>
+                                <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                     <li><strong>Meaning ({dashboardData.lowestDimension.score}):</strong> Significant opportunity for improvement. A lack of connection to purpose is a critical risk for talent attrition.</li>
+                                     <li><strong>Relationships ({dashboardData.chartData.find(d => d.subject === 'Relationships').A}):</strong> Improving team and manager connections will likely have the highest impact on morale.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        );
+
+        const App = () => {
+            const [view, setView] = useState('landing');
+            
+            const renderView = () => {
+                switch (view) {
+                    case 'dashboard':
+                        return <Dashboard setView={setView} />;
+                    case 'survey':
+                        return <Survey setView={setView} />;
+                    case 'reports':
+                        return <ReportsPage setView={setView} />;
+                    case 'landing':
+                    default:
+                        return <LandingPage setView={setView} />;
+                }
+            };
+
+            return (
+                <div className="App">
+                    {renderView()}
+                </div>
+            );
+        }
+
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+
+    </script>
+
+</body>
+</html>
